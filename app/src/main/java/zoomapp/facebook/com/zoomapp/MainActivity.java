@@ -1,37 +1,33 @@
 package zoomapp.facebook.com.zoomapp;
 
 import android.app.Activity;
+import android.content.ContentResolver;
 import android.content.Intent;
 import android.database.Cursor;
 import android.graphics.Bitmap;
 import android.graphics.BitmapFactory;
 import android.graphics.Point;
-import android.graphics.Rect;
 import android.net.Uri;
+import android.os.Bundle;
 import android.os.Environment;
 import android.provider.MediaStore;
 import android.support.v7.app.ActionBarActivity;
-import android.os.Bundle;
 import android.view.Display;
-import android.view.DragEvent;
 import android.view.Menu;
 import android.view.MenuItem;
 import android.view.MotionEvent;
 import android.view.View;
 import android.widget.Button;
 import android.widget.ImageView;
+import android.widget.RelativeLayout;
 
 import com.facebook.FacebookSdk;
 import com.facebook.messenger.MessengerUtils;
 import com.facebook.messenger.ShareToMessengerParams;
 
-import java.io.ByteArrayOutputStream;
 import java.io.File;
-import java.io.FileNotFoundException;
 import java.io.FileOutputStream;
 import java.io.IOException;
-import java.text.SimpleDateFormat;
-import java.util.Date;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 
@@ -41,9 +37,17 @@ public class MainActivity extends ActionBarActivity {
   private Button mLoadFromLocalButton;
   private ImageView mImageView;
   private Bitmap mImageBitmap;
+  private Button mSendButton;
+  private Button mCameraButton;
+  private View mBox;
+  private String mGifName;
+  private Uri mCameraImageUri;
+  private View mWaitOverlay;
+  private float x;
+  private float y;
 
   private static int SELECT_PICTURE = 1;
-  private static int PIC_CROP = 2;
+  private static int CAMERA_REQUEST = 2;
 
   @Override
   protected void onCreate(Bundle savedInstanceState) {
@@ -87,6 +91,20 @@ public class MainActivity extends ActionBarActivity {
       mImageBitmap = BitmapFactory.decodeFile(selectedImagePath);
       mImageView.setImageBitmap(mImageBitmap);
     }
+    if (requestCode == CAMERA_REQUEST && resultCode == RESULT_OK) {
+      Uri selectedImage = mCameraImageUri;
+      getContentResolver().notifyChange(selectedImage, null);
+      ContentResolver cr = getContentResolver();
+      try {
+        mImageBitmap = android.provider.MediaStore.Images.Media.getBitmap(cr, selectedImage);
+
+        mImageView.setVisibility(View.VISIBLE);
+        mImageView.setImageBitmap(mImageBitmap);
+      } catch (Exception e) {
+       // Empty
+      }
+
+    }
   }
 
   private String getPath(Uri uri) {
@@ -105,6 +123,10 @@ public class MainActivity extends ActionBarActivity {
   private void setUi() {
     mImageView = (ImageView) findViewById(R.id.image_preview);
     mLoadFromLocalButton = (Button) findViewById(R.id.find_image_from_local_storage_button);
+    mSendButton = (Button) findViewById(R.id.send_button);
+    mBox = findViewById(R.id.box);
+    mCameraButton = (Button) findViewById(R.id.get_image_from_camera);
+    mWaitOverlay = findViewById(R.id.wait);
   }
 
   private void setListeners() {
@@ -124,8 +146,9 @@ public class MainActivity extends ActionBarActivity {
     mImageView.setOnTouchListener(new View.OnTouchListener() {
       @Override
       public boolean onTouch(View v, MotionEvent event) {
-        float x = event.getAxisValue(MotionEvent.AXIS_X);
-        float y = event.getAxisValue(MotionEvent.AXIS_Y);
+
+        x = event.getAxisValue(MotionEvent.AXIS_X);
+        y = event.getAxisValue(MotionEvent.AXIS_Y);
 
         Display display = getWindowManager().getDefaultDisplay();
         Point size = new Point();
@@ -133,9 +156,49 @@ public class MainActivity extends ActionBarActivity {
         int width = size.x;
         int height = size.y;
 
-        x = x * mImageBitmap.getWidth() / width;
-        y = y * mImageBitmap.getWidth() / width;
+        if (mImageBitmap.getWidth() > mImageBitmap.getHeight()) {
+          x = x * mImageBitmap.getWidth() / width;
+          y = y * mImageBitmap.getWidth() / width;
+        } else {
+          x = x * mImageBitmap.getHeight() / height;
+          y = y * mImageBitmap.getHeight() / height;
+        }
 
+
+
+
+        mBox.setVisibility(View.VISIBLE);
+        RelativeLayout.LayoutParams params = new RelativeLayout.LayoutParams(200, 200);
+        if (mImageBitmap.getWidth() > mImageBitmap.getHeight()) {
+          params.leftMargin = (int) Math.max(x - 200 * ((float) mImageBitmap.getWidth() / width), 0);
+          params.topMargin = (int) Math.max(y - 200 * ((float) mImageBitmap.getWidth() / width), 0);
+        } else {
+          params.leftMargin = (int) Math.max(x, 0);
+          params.topMargin = (int) Math.max(y, 0);
+        }
+        mBox.setLayoutParams(params);
+
+        mSendButton.setVisibility(View.VISIBLE);
+        return false;
+      }
+    });
+
+    mCameraButton.setOnClickListener(new View.OnClickListener() {
+      @Override
+      public void onClick(View v) {
+        Intent cameraIntent = new Intent(MediaStore.ACTION_IMAGE_CAPTURE);
+        File photo = new File(Environment.getExternalStorageDirectory(),  "temp.jpg");
+        cameraIntent.putExtra(MediaStore.EXTRA_OUTPUT,
+            Uri.fromFile(photo));
+        mCameraImageUri = Uri.fromFile(photo);
+        startActivityForResult(cameraIntent, CAMERA_REQUEST);
+      }
+    });
+
+    mSendButton.setOnClickListener(new View.OnClickListener() {
+      @Override
+      public void onClick(View v) {
+        mWaitOverlay.setVisibility(View.VISIBLE);
         AnimatedGifEncoder gifEncoder = new AnimatedGifEncoder();
 
         String gifName = Environment.getExternalStorageDirectory()
@@ -154,8 +217,8 @@ public class MainActivity extends ActionBarActivity {
         gifEncoder.setQuality(20);
 
         int factor = 2;
-
         Bitmap bitmap = null;
+
         if (mImageBitmap.getWidth() > mImageBitmap.getHeight()) {
           bitmap = Bitmap.createBitmap(mImageBitmap,
               Math.max((int) x - mImageBitmap.getHeight() / factor, 0),
@@ -176,38 +239,16 @@ public class MainActivity extends ActionBarActivity {
         gifEncoder.addFrame(bitmap);
 
         factor = 4;
-
-        bitmap = Bitmap.createBitmap(mImageBitmap,
-            Math.max((int) x - mImageBitmap.getWidth()/factor, 0),
-            Math.max((int) y - mImageBitmap.getWidth()/factor, 0),
-            mImageBitmap.getWidth()/factor + (int) Math.min(mImageBitmap.getWidth()/factor, mImageBitmap.getWidth() - x),
-            mImageBitmap.getWidth()/factor + (int) Math.min(mImageBitmap.getWidth()/factor, mImageBitmap.getHeight() - y));
-
-        mImageView.setImageBitmap(bitmap);
-
+        bitmap = createBitmap(mImageBitmap, factor, (int) x, (int) y);
         gifEncoder.addFrame(Bitmap.createScaledBitmap(bitmap, firstWidth, firstHeight, false));
 
         factor = 6;
-
-        bitmap = Bitmap.createBitmap(mImageBitmap,
-            Math.max((int) x - mImageBitmap.getWidth()/factor, 0),
-            Math.max((int) y - mImageBitmap.getWidth()/factor, 0),
-            mImageBitmap.getWidth()/factor + (int) Math.min(mImageBitmap.getWidth()/factor, mImageBitmap.getWidth() - x),
-            mImageBitmap.getWidth()/factor + (int) Math.min(mImageBitmap.getWidth() / factor, mImageBitmap.getHeight() - y));
-
+        bitmap = createBitmap(mImageBitmap, factor, (int) x, (int) y);
         gifEncoder.addFrame(Bitmap.createScaledBitmap(bitmap, firstWidth, firstHeight, false));
 
         factor = 10;
-
-        bitmap = Bitmap.createBitmap(mImageBitmap,
-            Math.max((int) x - mImageBitmap.getWidth()/factor, 0),
-            Math.max((int) y - mImageBitmap.getWidth()/factor, 0),
-            mImageBitmap.getWidth()/factor + (int) Math.min(mImageBitmap.getWidth()/factor, mImageBitmap.getWidth() - x),
-            mImageBitmap.getWidth()/factor + (int) Math.min(mImageBitmap.getWidth()/factor, mImageBitmap.getHeight() - y));
-
-        mImageView.setImageBitmap(bitmap);
+        bitmap = createBitmap(mImageBitmap, factor, (int) x, (int) y);
         gifEncoder.addFrame(Bitmap.createScaledBitmap(bitmap, firstWidth, firstHeight, false));
-
         gifEncoder.finish();
 
         try {
@@ -218,70 +259,25 @@ public class MainActivity extends ActionBarActivity {
           Logger.getLogger("Holis").log(Level.INFO, "FUCK YOU");
         }
 
+        mGifName = gifName;
         sendBroadcast(new Intent(Intent.ACTION_MEDIA_SCANNER_SCAN_FILE, Uri.parse(gifName)));
 
         ShareToMessengerParams shareToMessengerParams =
-            ShareToMessengerParams.newBuilder(Uri.fromFile(new File(gifName)), "image/gif").build();
+            ShareToMessengerParams.newBuilder(Uri.fromFile(new File(mGifName)), "image/gif").build();
         MessengerUtils.shareToMessenger(
             MainActivity.this,
             1,
             shareToMessengerParams);
         MessengerUtils.finishShareToMessenger(MainActivity.this, shareToMessengerParams);
-
-
-        Logger.getLogger("Holis").log(Level.INFO, "Axis: " + x + ", " + y);
-        return false;
       }
     });
   }
 
-  private void storeImage(Bitmap image) {
-
-    ByteArrayOutputStream bytes = new ByteArrayOutputStream();
-    image.compress(Bitmap.CompressFormat.JPEG, 40, bytes);
-
-    //you can create a new file name "test.jpg" in sdcard folder.
-    String fileName = Environment.getExternalStorageDirectory()
-        + File.separator + image.hashCode() + ".jpg";
-    File f = new File(fileName);
-    sendBroadcast(new Intent(Intent.ACTION_MEDIA_SCANNER_SCAN_FILE, Uri.fromFile(f)));
-    try {
-      f.createNewFile();
-      //write the bytes in file
-      FileOutputStream fo = new FileOutputStream(f);
-      fo.write(bytes.toByteArray());
-
-      // remember close de FileOutput
-      fo.close();
-    } catch (IOException e){
-      Logger.getLogger("Holis").log(Level.INFO, "Error on IO");
-    }
-  }
-
-  /** Create a File for saving an image or video */
-  private File getOutputMediaFile(){
-    // To be safe, you should check that the SDCard is mounted
-    // using Environment.getExternalStorageState() before doing this.
-    File mediaStorageDir = new File(Environment.getExternalStorageDirectory()
-        + "/Android/data/"
-        + getApplicationContext().getPackageName()
-        + "/Files");
-
-    // This location works best if you want the created images to be shared
-    // between applications and persist after your app has been uninstalled.
-
-    // Create the storage directory if it does not exist
-    if (! mediaStorageDir.exists()){
-      if (! mediaStorageDir.mkdirs()){
-        Logger.getLogger("Holis").log(Level.INFO, "Error on mkdir");
-        return null;
-      }
-    }
-    // Create a media file name
-    String timeStamp = new SimpleDateFormat("ddMMyyyy_HHmm").format(new Date());
-    File mediaFile;
-    String mImageName="MI_"+ timeStamp +".jpg";
-    mediaFile = new File(mediaStorageDir.getPath() + File.separator + mImageName);
-    return mediaFile;
+  private Bitmap createBitmap(Bitmap originalBitmap, int factor, int x, int y) {
+    return Bitmap.createBitmap(originalBitmap,
+        Math.max(x - originalBitmap.getWidth()/factor, 0),
+        Math.max(y - originalBitmap.getWidth()/factor, 0),
+        originalBitmap.getWidth()/factor + Math.min(originalBitmap.getWidth()/factor, originalBitmap.getWidth() - x),
+        originalBitmap.getWidth()/factor + Math.min(originalBitmap.getWidth()/factor, originalBitmap.getHeight() - y));
   }
 }

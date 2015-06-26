@@ -1,23 +1,112 @@
-<FrameLayout xmlns:android="http://schemas.android.com/apk/res/android"
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
                 xmlns:tools="http://schemas.android.com/tools"
                 android:layout_width="match_parent"
                 android:layout_height="match_parent"
+                android:orientation="vertical"
+                android:layout_weight="1"
                 android:id="@+id/main_activity"
                 tools:context=".MainActivity">
 
-    <Button
+    <FrameLayout
         android:layout_width="match_parent"
-        android:layout_height="100dp"
-        android:text="Load image from gallery"
-        android:id="@+id/find_image_from_local_storage_button"/>
-
-    <ImageView
-        android:layout_width="wrap_content"
-        android:layout_height="wrap_content"
-        android:adjustViewBounds="true"
+        android:layout_height="0dp"
+        android:gravity="center"
         android:layout_gravity="center"
-        android:background="@android:color/black"
-        android:visibility="gone"
-        android:id="@+id/image_preview"/>
+        android:layout_weight=".8">
 
-</FrameLayout>
+
+        <RelativeLayout
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:id="@+id/abs_layout"
+            android:layout_gravity="center">
+
+            <ImageView
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:adjustViewBounds="true"
+            android:layout_gravity="center"
+            android:background="@android:color/black"
+            android:visibility="gone"
+            android:id="@+id/image_preview"/>
+
+            <View
+                android:layout_width="100dp"
+                android:layout_height="100dp"
+                android:background="@drawable/box"
+                android:visibility="gone"
+                android:id="@+id/box"/>
+
+        </RelativeLayout>
+
+        <View
+            android:layout_width="match_parent"
+            android:layout_height="match_parent"
+            android:alpha="0.3"
+            android:background="@android:color/black"
+            android:layout_gravity="center"
+            android:textAlignment="center"
+            android:visibility="gone"
+            android:id="@+id/wait"
+            android:textSize="20dp"/>
+    </FrameLayout>
+
+    <FrameLayout
+        android:layout_width="match_parent"
+        android:layout_height="0dp"
+        android:layout_weight=".2"
+        android:background="@android:color/white"
+        android:gravity="center"
+        android:orientation="horizontal">
+        <LinearLayout
+            android:layout_width="wrap_content"
+            android:layout_height="match_parent"
+            android:layout_gravity="left"
+            android:layout_marginLeft="15dp"
+            android:gravity="center"
+            android:background="@android:color/transparent">
+
+            <Button
+                android:layout_width="50dp"
+                android:layout_height="50dp"
+                android:background="@drawable/camera"
+                android:id="@+id/get_image_from_camera"/>
+
+        </LinearLayout>
+
+        <LinearLayout
+            android:layout_width="wrap_content"
+            android:layout_height="match_parent"
+            android:layout_gravity="center"
+            android:gravity="center"
+            android:background="@android:color/transparent">
+
+            <Button
+                android:layout_width="50dp"
+                android:layout_height="50dp"
+                android:background="@drawable/messenger_bubble_large_blue"
+                android:visibility="gone"
+                android:id="@+id/send_button"/>
+
+        </LinearLayout>
+
+        <LinearLayout
+            android:layout_width="wrap_content"
+            android:layout_height="match_parent"
+            android:layout_gravity="right"
+            android:gravity="center"
+            android:layout_marginRight="15dp"
+            android:background="@android:color/transparent">
+
+            <Button
+                android:layout_width="50dp"
+                android:layout_height="50dp"
+                android:background="@drawable/gallery"
+                android:id="@+id/find_image_from_local_storage_button"/>
+
+        </LinearLayout>
+    </FrameLayout>
+
+
+
+</LinearLayout>
