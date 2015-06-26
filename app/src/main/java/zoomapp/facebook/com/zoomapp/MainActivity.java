@@ -1,6 +1,7 @@
 package zoomapp.facebook.com.zoomapp;
 
 import android.app.Activity;
+import android.app.ProgressDialog;
 import android.content.ContentResolver;
 import android.content.Intent;
 import android.database.Cursor;
@@ -11,7 +12,6 @@ import android.net.Uri;
 import android.os.Bundle;
 import android.os.Environment;
 import android.provider.MediaStore;
-import android.support.v7.app.ActionBarActivity;
 import android.view.Display;
 import android.view.Menu;
 import android.view.MenuItem;
@@ -26,13 +26,11 @@ import com.facebook.messenger.MessengerUtils;
 import com.facebook.messenger.ShareToMessengerParams;
 
 import java.io.File;
-import java.io.FileOutputStream;
-import java.io.IOException;
-import java.util.logging.Level;
-import java.util.logging.Logger;
+
+import zoomapp.facebook.com.zoomapp.gif.GifBuilder;
 
 
-public class MainActivity extends ActionBarActivity {
+public class MainActivity extends Activity {
 
   private Button mLoadFromLocalButton;
   private ImageView mImageView;
@@ -40,9 +38,7 @@ public class MainActivity extends ActionBarActivity {
   private Button mSendButton;
   private Button mCameraButton;
   private View mBox;
-  private String mGifName;
   private Uri mCameraImageUri;
-  private View mWaitOverlay;
   private float x;
   private float y;
 
@@ -126,7 +122,6 @@ public class MainActivity extends ActionBarActivity {
     mSendButton = (Button) findViewById(R.id.send_button);
     mBox = findViewById(R.id.box);
     mCameraButton = (Button) findViewById(R.id.get_image_from_camera);
-    mWaitOverlay = findViewById(R.id.wait);
   }
 
   private void setListeners() {
@@ -156,27 +151,16 @@ public class MainActivity extends ActionBarActivity {
         int width = size.x;
         int height = size.y;
 
+        mBox.setVisibility(View.VISIBLE);
+        RelativeLayout.LayoutParams params = new RelativeLayout.LayoutParams(200, 200);
+        params.leftMargin = (int) Math.max(x - 100, 0);
+        params.topMargin = (int) Math.max(y - 100, 0);
+        mBox.setLayoutParams(params);
+        
         if (mImageBitmap.getWidth() > mImageBitmap.getHeight()) {
           x = x * mImageBitmap.getWidth() / width;
           y = y * mImageBitmap.getWidth() / width;
-        } else {
-          x = x * mImageBitmap.getHeight() / height;
-          y = y * mImageBitmap.getHeight() / height;
         }
-
-
-
-
-        mBox.setVisibility(View.VISIBLE);
-        RelativeLayout.LayoutParams params = new RelativeLayout.LayoutParams(200, 200);
-        if (mImageBitmap.getWidth() > mImageBitmap.getHeight()) {
-          params.leftMargin = (int) Math.max(x - 200 * ((float) mImageBitmap.getWidth() / width), 0);
-          params.topMargin = (int) Math.max(y - 200 * ((float) mImageBitmap.getWidth() / width), 0);
-        } else {
-          params.leftMargin = (int) Math.max(x, 0);
-          params.topMargin = (int) Math.max(y, 0);
-        }
-        mBox.setLayoutParams(params);
 
         mSendButton.setVisibility(View.VISIBLE);
         return false;
@@ -198,86 +182,31 @@ public class MainActivity extends ActionBarActivity {
     mSendButton.setOnClickListener(new View.OnClickListener() {
       @Override
       public void onClick(View v) {
-        mWaitOverlay.setVisibility(View.VISIBLE);
-        AnimatedGifEncoder gifEncoder = new AnimatedGifEncoder();
+        final ProgressDialog progressDialog = new ProgressDialog(MainActivity.this);
+        progressDialog.setMessage("Building gif");
+        progressDialog.show();
 
-        String gifName = Environment.getExternalStorageDirectory()
-            + File.separator + "testgif.gif";
+        String gifName =
+            Environment.getExternalStorageDirectory()  + File.separator + "testgif.gif";
 
-        FileOutputStream fileos = null;
-        try {
-          fileos = new FileOutputStream(gifName);
-          gifEncoder.start(fileos);
-        } catch (IOException e) {
-          Logger.getLogger("Holis").log(Level.INFO, "Error on IO GIFFFFF");
-        }
-
-        gifEncoder.setRepeat(0);
-        gifEncoder.setDelay(1000);
-        gifEncoder.setQuality(20);
-
-        int factor = 2;
-        Bitmap bitmap = null;
-
-        if (mImageBitmap.getWidth() > mImageBitmap.getHeight()) {
-          bitmap = Bitmap.createBitmap(mImageBitmap,
-              Math.max((int) x - mImageBitmap.getHeight() / factor, 0),
-              0,
-              mImageBitmap.getHeight() / factor + (int) Math.min(mImageBitmap.getHeight() / factor, mImageBitmap.getWidth() - x),
-              mImageBitmap.getHeight());
-        } else {
-          bitmap = Bitmap.createBitmap(mImageBitmap,
-              0,
-              Math.max((int) y - mImageBitmap.getWidth() / factor, 0),
-              mImageBitmap.getWidth(),
-              mImageBitmap.getWidth() / factor + (int) Math.min(mImageBitmap.getWidth() / factor, mImageBitmap.getHeight() - y));
-        }
-
-        int firstWidth = bitmap.getWidth();
-        int firstHeight = bitmap.getHeight();
-
-        gifEncoder.addFrame(bitmap);
-
-        factor = 4;
-        bitmap = createBitmap(mImageBitmap, factor, (int) x, (int) y);
-        gifEncoder.addFrame(Bitmap.createScaledBitmap(bitmap, firstWidth, firstHeight, false));
-
-        factor = 6;
-        bitmap = createBitmap(mImageBitmap, factor, (int) x, (int) y);
-        gifEncoder.addFrame(Bitmap.createScaledBitmap(bitmap, firstWidth, firstHeight, false));
-
-        factor = 10;
-        bitmap = createBitmap(mImageBitmap, factor, (int) x, (int) y);
-        gifEncoder.addFrame(Bitmap.createScaledBitmap(bitmap, firstWidth, firstHeight, false));
-        gifEncoder.finish();
-
-        try {
-          if (fileos != null) {
-            fileos.close();
+        GifBuilder gifBuilder = new GifBuilder(MainActivity.this, mImageBitmap, gifName) {
+          @Override
+          public void onDecodeFinished(String gifName) {
+            progressDialog.dismiss();
+            ShareToMessengerParams shareToMessengerParams =
+                ShareToMessengerParams.newBuilder(
+                    Uri.fromFile(new File(gifName)), "image/gif").build();
+            MessengerUtils.shareToMessenger(
+                MainActivity.this,
+                1,
+                shareToMessengerParams);
+            MessengerUtils.finishShareToMessenger(MainActivity.this, shareToMessengerParams);
           }
-        } catch (IOException e) {
-          Logger.getLogger("Holis").log(Level.INFO, "FUCK YOU");
-        }
+        };
 
-        mGifName = gifName;
-        sendBroadcast(new Intent(Intent.ACTION_MEDIA_SCANNER_SCAN_FILE, Uri.parse(gifName)));
-
-        ShareToMessengerParams shareToMessengerParams =
-            ShareToMessengerParams.newBuilder(Uri.fromFile(new File(mGifName)), "image/gif").build();
-        MessengerUtils.shareToMessenger(
-            MainActivity.this,
-            1,
-            shareToMessengerParams);
-        MessengerUtils.finishShareToMessenger(MainActivity.this, shareToMessengerParams);
+        // Build the gif in background
+        gifBuilder.execute((int) x, (int) y);
       }
     });
-  }
-
-  private Bitmap createBitmap(Bitmap originalBitmap, int factor, int x, int y) {
-    return Bitmap.createBitmap(originalBitmap,
-        Math.max(x - originalBitmap.getWidth()/factor, 0),
-        Math.max(y - originalBitmap.getWidth()/factor, 0),
-        originalBitmap.getWidth()/factor + Math.min(originalBitmap.getWidth()/factor, originalBitmap.getWidth() - x),
-        originalBitmap.getWidth()/factor + Math.min(originalBitmap.getWidth()/factor, originalBitmap.getHeight() - y));
   }
 }

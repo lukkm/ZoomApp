@@ -38,17 +38,6 @@
                 android:id="@+id/box"/>
 
         </RelativeLayout>
-
-        <View
-            android:layout_width="match_parent"
-            android:layout_height="match_parent"
-            android:alpha="0.3"
-            android:background="@android:color/black"
-            android:layout_gravity="center"
-            android:textAlignment="center"
-            android:visibility="gone"
-            android:id="@+id/wait"
-            android:textSize="20dp"/>
     </FrameLayout>
 
     <FrameLayout
