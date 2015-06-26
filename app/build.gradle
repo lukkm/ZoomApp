@@ -6,7 +6,7 @@ android {
 
     defaultConfig {
         applicationId "zoomapp.facebook.com.zoomapp"
-        minSdkVersion 10
+        minSdkVersion 13
         targetSdkVersion 22
         versionCode 1
         versionName "1.0"
