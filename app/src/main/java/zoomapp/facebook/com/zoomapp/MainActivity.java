@@ -156,10 +156,17 @@ public class MainActivity extends Activity {
         params.leftMargin = (int) Math.max(x - 100, 0);
         params.topMargin = (int) Math.max(y - 100, 0);
         mBox.setLayoutParams(params);
-        
+
         if (mImageBitmap.getWidth() > mImageBitmap.getHeight()) {
-          x = x * mImageBitmap.getWidth() / width;
-          y = y * mImageBitmap.getWidth() / width;
+          if (mImageBitmap.getWidth() > width) {
+            x = x * mImageBitmap.getWidth() / width;
+            y = y * mImageBitmap.getWidth() / width;
+          }
+        } else {
+          if (mImageBitmap.getHeight() > height) {
+            x = x * mImageBitmap.getHeight() / height;
+            y = y * mImageBitmap.getHeight() / height;
+          }
         }
 
         mSendButton.setVisibility(View.VISIBLE);
@@ -187,7 +194,7 @@ public class MainActivity extends Activity {
         progressDialog.show();
 
         String gifName =
-            Environment.getExternalStorageDirectory()  + File.separator + "testgif.gif";
+            Environment.getExternalStorageDirectory() + File.separator + "testgif.gif";
 
         GifBuilder gifBuilder = new GifBuilder(MainActivity.this, mImageBitmap, gifName) {
           @Override
