@@ -2,8 +2,6 @@ package zoomapp.facebook.com.zoomapp;
 
 import java.io.IOException;
 import java.io.OutputStream;
-import java.util.logging.Level;
-import java.util.logging.Logger;
 
 import android.graphics.Bitmap;
 import android.graphics.Bitmap.Config;
@@ -161,7 +159,6 @@ public class AnimatedGifEncoder {
    * OutputStream, the stream is not closed.
    */
   public boolean finish() {
-    Logger.getLogger("Holis").log(Level.INFO, "FUCK YOU TOO");
     if (!started)
       return false;
     boolean ok = true;
@@ -483,14 +480,14 @@ public class AnimatedGifEncoder {
 	/*
 	 * NeuQuant Neural-Net Quantization Algorithm
 	 * ------------------------------------------
-	 * 
+	 *
 	 * Copyright (c) 1994 Anthony Dekker
-	 * 
+	 *
 	 * NEUQUANT Neural-Net quantization algorithm by Anthony Dekker, 1994. See
 	 * "Kohonen neural networks for optimal colour quantization" in "Network:
 	 * Computation in Neural Systems" Vol. 5 (1994) pp 351-367. for a discussion of
 	 * the algorithm.
-	 * 
+	 *
 	 * Any party obtaining a copy of these files from the author, directly or
 	 * indirectly, is granted, free of charge, a full and unrestricted irrevocable,
 	 * world-wide, paid up, royalty-free, nonexclusive right and license to deal in

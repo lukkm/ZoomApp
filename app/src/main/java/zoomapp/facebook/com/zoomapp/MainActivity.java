@@ -22,6 +22,8 @@ import android.widget.Button;
 import android.widget.ImageView;
 
 import com.facebook.FacebookSdk;
+import com.facebook.messenger.MessengerUtils;
+import com.facebook.messenger.ShareToMessengerParams;
 
 import java.io.ByteArrayOutputStream;
 import java.io.File;
@@ -149,6 +151,7 @@ public class MainActivity extends ActionBarActivity {
 
         gifEncoder.setRepeat(0);
         gifEncoder.setDelay(1000);
+        gifEncoder.setQuality(20);
 
         int factor = 2;
 
@@ -192,7 +195,6 @@ public class MainActivity extends ActionBarActivity {
             mImageBitmap.getWidth()/factor + (int) Math.min(mImageBitmap.getWidth()/factor, mImageBitmap.getWidth() - x),
             mImageBitmap.getWidth()/factor + (int) Math.min(mImageBitmap.getWidth() / factor, mImageBitmap.getHeight() - y));
 
-        storeImage(bitmap);
         gifEncoder.addFrame(Bitmap.createScaledBitmap(bitmap, firstWidth, firstHeight, false));
 
         factor = 10;
@@ -203,7 +205,6 @@ public class MainActivity extends ActionBarActivity {
             mImageBitmap.getWidth()/factor + (int) Math.min(mImageBitmap.getWidth()/factor, mImageBitmap.getWidth() - x),
             mImageBitmap.getWidth()/factor + (int) Math.min(mImageBitmap.getWidth()/factor, mImageBitmap.getHeight() - y));
 
-        storeImage(bitmap);
         mImageView.setImageBitmap(bitmap);
         gifEncoder.addFrame(Bitmap.createScaledBitmap(bitmap, firstWidth, firstHeight, false));
 
@@ -218,6 +219,15 @@ public class MainActivity extends ActionBarActivity {
         }
 
         sendBroadcast(new Intent(Intent.ACTION_MEDIA_SCANNER_SCAN_FILE, Uri.parse(gifName)));
+
+        ShareToMessengerParams shareToMessengerParams =
+            ShareToMessengerParams.newBuilder(Uri.fromFile(new File(gifName)), "image/gif").build();
+        MessengerUtils.shareToMessenger(
+            MainActivity.this,
+            1,
+            shareToMessengerParams);
+        MessengerUtils.finishShareToMessenger(MainActivity.this, shareToMessengerParams);
+
 
         Logger.getLogger("Holis").log(Level.INFO, "Axis: " + x + ", " + y);
         return false;
@@ -246,21 +256,6 @@ public class MainActivity extends ActionBarActivity {
     } catch (IOException e){
       Logger.getLogger("Holis").log(Level.INFO, "Error on IO");
     }
-/*
-    File pictureFile = getOutputMediaFile();
-    if (pictureFile == null) {
-      return;
-    }
-    try {
-      FileOutputStream fos = new FileOutputStream(pictureFile);
-      image.compress(Bitmap.CompressFormat.PNG, 90, fos);
-      fos.close();
-      sendBroadcast(new Intent(Intent.ACTION_MEDIA_SCANNER_SCAN_FILE, Uri.fromFile(pictureFile)));
-    } catch (FileNotFoundException e) {
-      Logger.getLogger("Holis").log(Level.INFO, "Error on file");
-    } catch (IOException e) {
-
-    }*/
   }
 
   /** Create a File for saving an image or video */
